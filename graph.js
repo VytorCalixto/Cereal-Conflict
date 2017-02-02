@@ -31,6 +31,10 @@ class Graph {
         }
         return null
     }
+
+    nodeCount() {
+        return Object.keys(this.nodes).length
+    }
 }
 
 function findPathCallback() {

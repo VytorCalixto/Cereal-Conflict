@@ -5,46 +5,76 @@ const graph = require('./graph')
 
 const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
+    terminal: false
 })
 
-let g = new graph()
-let transactions = []
-let data = {}
+let schedules = {}
+let schedule = 0
 
 rl.on('line', (line) => {
-    // t é um array com a entrada
-    var t = line.split(' ')
-    transactions.push(t)
-    let node = t[1]
+    if(typeof schedules[schedule] !== 'undefined') {
+        if(schedules[schedule].allCommit) {
+            schedules[++schedule] = {
+                s: schedule,
+                allCommit: false,
+                commitCount: 0,
+                g: new graph(),
+                data: {},
+                operations: []
+            }
+        }
+    }
+    if(schedule === 0) {
+        schedules[++schedule] = {
+            s: schedule,
+            allCommit: false,
+            commitCount: 0,
+            g: new graph(),
+            data: {},
+            operations: []
+        }
+    }
+
+    let t = line.split(' ')
+    schedules[schedule].operations.push(t)
+    schedules[schedule].g.addNode(t[1])
     if(t[3] !== '-') {
-        data[t[3]] = {
+        schedules[schedule].data[t[3]] = {
             read: [],
             write: []
         }
+    } else {
+        schedules[schedule].commitCount++
+        schedules[schedule].allCommit = (schedules[schedule].commitCount === schedules[schedule].g.nodeCount())
     }
-    g.addNode(node)
+    // console.log(schedules)
 
 }).on('close', () => {
-    transactions.forEach((t)=>{
-        // console.log(t)
-        if(t[3] !== '-') {
-            if(t[2] === 'R') {
-                addRead(data, t)
-            } else if(t[2] === 'W') {
-                addWrite(data, t)
+    Object.keys(schedules).forEach((s) => {
+        // console.log('Schedule ' + s)
+        // console.log(schedules[s])
+        let schdl = schedules[s]
+        schdl.commitCount = 0;
+        schdl.operations.forEach((t) => {
+            if(t[3] !== '-') {
+                if(t[2] === 'R') {
+                    addRead(schdl.data, t, schdl.g)
+                } else if(t[2] === 'W') {
+                    addWrite(schdl.data, t, schdl.g)
+                }
+            } else {
+                commit(schdl.data, t)
+                ++schdl.commitCount
             }
-        } else {
-            commit(data, t)
-        }
+        })
+        // console.log(schdl.g)
+        checkConflict(schdl)
     })
-    // console.log(data)
-    console.log(g)
-    checkCycle(g)
     process.exit(0)
 })
 
-function addRead(data, t) {
+function addRead(data, t, g) {
     if(data[t[3]].read.indexOf(t[1]) === -1)
         data[t[3]].read.push(t[1])
     if(data[t[3]].write.length > 0) {
@@ -57,7 +87,7 @@ function addRead(data, t) {
     }
 }
 
-function addWrite(data, t) {
+function addWrite(data, t, g) {
     if(data[t[3]].write.indexOf(t[1]) === -1)
         data[t[3]].write.push(t[1])
     if(data[t[3]].read.length > 0) {
@@ -85,8 +115,9 @@ function removeFromArray(arr, el) {
     if(index > -1) arr.splice(index, 1)
 }
 
-function checkCycle(graph) {
-    let escalonamento = 0
+function checkConflict(schdl) {
+    let graph = schdl.g
+    let conflict = false
     Object.keys(graph.nodes).forEach((node) => {
         let neighbors = graph.nodes[node]
         // console.log('node ' + node + ': ' + neighbors)
@@ -94,14 +125,17 @@ function checkCycle(graph) {
             neighbors.forEach((neighbor) => {
                 let result = graph.findPath(neighbor, node)
                 // console.log('result:' + result)
-                if(result !== null) {
-                    let cycle = result.sort().join()
-                    console.log(`${++escalonamento} ${cycle} NAO`)
-                } else {
-                    let cycle = neighbor+','+node
-                    console.log(`${++escalonamento} ${cycle} SIM`)
-                }
+                let cycle = Object.keys(graph.nodes).sort().join() //result.sort().join()
+                conflict = (result !== null)
+                // if(result !== null) {
+                //     console.log(`${schdl.s} ${cycle} NAO`)
+                // } else {
+                //     console.log(`${schdl.s} ${cycle} SIM`)
+                // }
             })
         }
     })
+    let cycle = Object.keys(graph.nodes).sort().join()
+    if(conflict) console.log(`${schdl.s} ${cycle} NAO`)
+    else console.log(`${schdl.s} ${cycle} SIM`)
 }
