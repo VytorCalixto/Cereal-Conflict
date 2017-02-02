@@ -96,11 +96,12 @@ rl.on('line', (line) => {
 })
 
 function addRead(data, t, g) {
+    // Adiciona qual transação está lendo o dado
     if(data[t[3]].read.indexOf(t[1]) === -1)
         data[t[3]].read.push(t[1])
+    // Se leitura após a escrita
     if(data[t[3]].write.length > 0) {
         data[t[3]].write.forEach((d) => {
-            // console.log('rd: '+d)
             if(d !== t[1]) {
                 g.createArch(d, t[1])
             }
@@ -109,11 +110,12 @@ function addRead(data, t, g) {
 }
 
 function addWrite(data, t, g) {
+    // Adiciona qual transação está escrevendo no dado
     if(data[t[3]].write.indexOf(t[1]) === -1)
         data[t[3]].write.push(t[1])
+    // Se escrita após leitura
     if(data[t[3]].read.length > 0) {
         data[t[3]].read.forEach((d) => {
-            // console.log('wd: ' + d)
             if(d !== t[1]) {
                 g.createArch(d, t[1])
             }
@@ -122,10 +124,9 @@ function addWrite(data, t, g) {
 }
 
 function commit(data, t) {
-    // console.log('commit ' + t)
+    // Remove a transação da lista de transações que está lendo/escrevendo em dados
     Object.keys(data).forEach((key) => {
         let d = data[key]
-        // console.log(d)
         removeFromArray(d.read, t[1])
         removeFromArray(d.write, t[1])
     })
@@ -136,23 +137,22 @@ function removeFromArray(arr, el) {
     if(index > -1) arr.splice(index, 1)
 }
 
+// Checa os conflitos
 function checkConflict(schdl) {
     let graph = schdl.g
     let conflict = false
+    // Para cada nodo do grafo
     Object.keys(graph.nodes).forEach((node) => {
         let neighbors = graph.nodes[node]
-        // console.log('node ' + node + ': ' + neighbors)
         if(neighbors.length > 0) {
+            // Pega um dos vizinhos do nodo e verifica se
+            // há um caminho do vizinho para o nodo original.
+            // Como o grafo é dirigido, se o vizinho alcança o nodo original,
+            // há um ciclo
             neighbors.forEach((neighbor) => {
                 let result = graph.findPath(neighbor, node)
-                // console.log('result:' + result)
-                let cycle = Object.keys(graph.nodes).sort().join() //result.sort().join()
+                let cycle = Object.keys(graph.nodes).sort().join()
                 conflict = (result !== null)
-                // if(result !== null) {
-                //     console.log(`${schdl.s} ${cycle} NAO`)
-                // } else {
-                //     console.log(`${schdl.s} ${cycle} SIM`)
-                // }
             })
         }
     })

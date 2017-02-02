@@ -1,21 +1,38 @@
 'use strict'
 
+/**
+ * Classe do grafo
+ */
 class Graph {
+    /**
+     * Construtor
+     * @type {Object}
+     */
     constructor(nodes = {}) {
         this.nodes = nodes
     }
 
+    /**
+     * Adiciona um nodo ao grafo
+     */
     addNode(node) {
         if(typeof this.nodes[node] === 'undefined') {
             this.nodes[node] = []
         }
     }
 
+    /**
+     * Cria um arco no grafo de tail até head
+     */
     createArch(tail, head) {
         if(this.nodes[tail].indexOf(head) === -1)
             this.nodes[tail].push(head)
     }
 
+    /**
+     * Procura um caminho entre dois nodos. Usa backtracking
+     * @type {Array}
+     */
     findPath(start, end, path = []) {
         path = path.concat([start])
         if(start === end) return path
@@ -32,13 +49,12 @@ class Graph {
         return null
     }
 
+    /**
+     * Retorna o número de nodos
+     */
     nodeCount() {
         return Object.keys(this.nodes).length
     }
-}
-
-function findPathCallback() {
-    return null
 }
 
 module.exports = Graph;
